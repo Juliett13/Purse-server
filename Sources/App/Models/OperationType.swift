@@ -10,6 +10,11 @@ final class OperationType: SQLiteModel {
         self.id = id
         self.name = name
     }
+    
+    init() {
+        self.id = 0
+        self.name = ""
+    }
 
 }
 extension OperationType: Content {}
