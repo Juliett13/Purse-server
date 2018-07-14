@@ -2,7 +2,6 @@ import FluentSQLite
 import Vapor
 
 final class OperationType: SQLiteModel {
-
     var id: Int?
     var name: String
     
@@ -17,6 +16,7 @@ final class OperationType: SQLiteModel {
     }
 
 }
+
 extension OperationType: Content {}
 extension OperationType: Migration {}
 extension OperationType: Parameter { }

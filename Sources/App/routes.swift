@@ -6,25 +6,27 @@ public func routes(_ router: Router) throws {
     router.get("operationType", use: opTypeController.getList)
     router.get("operationType", Int.parameter, use: opTypeController.getElem)
     
+    let userController = UserController()
+    router.post("user", use: userController.createUser)
+    router.post("user", "login", use: userController.loginUser)
     
+    let tokenAuthenticationMiddleware = User.tokenAuthMiddleware()
+    let authedRoutes = router.grouped(tokenAuthenticationMiddleware)
+        
     let accountController = AccountController()
-    router.get("account", use: accountController.getList)
-    router.get("account", Int.parameter, use: accountController.getElem)
-    router.post("account", use: accountController.create)
-    router.delete("account", Account.parameter, use: accountController.delete)
+    authedRoutes.get("account", use: accountController.getList)
+    authedRoutes.get("account", Int.parameter, use: accountController.getElem)
+    authedRoutes.post("account", use: accountController.create)
 
-    
     let operationController = OperationController()
-    router.get("operation", use: operationController.getList)
-    router.get("operation", Int.parameter, use: operationController.getElem)
-//    router.delete("operation", Operation.parameter, use: operationController.delete)
-   
-    router.post("operation", "income", use: operationController.createIncome)
-    router.post("operation", "outgo", use: operationController.createOutgo)
-    router.post("operation", "transfer", use: operationController.createTransfer)
-    
-    router.get("operation", "income", use: operationController.getIncomeList)
-    router.get("operation", "outgo", use: operationController.getOutgoList)
-    router.get("operation", "transfer", use: operationController.getTransferList)
+    authedRoutes.get("operation", use: operationController.getList)
+    authedRoutes.get("operation", Int.parameter, use: operationController.getElem)
 
+    authedRoutes.post("operation", "income", use: operationController.createIncome)
+    authedRoutes.post("operation", "outgo", use: operationController.createOutgo)
+    authedRoutes.post("operation", "transfer", use: operationController.createTransfer)
+    
+    authedRoutes.get("operation", "income", use: operationController.getIncomeList)
+    authedRoutes.get("operation", "outgo", use: operationController.getOutgoList)
+    authedRoutes.get("operation", "transfer", use: operationController.getTransferList)
 }

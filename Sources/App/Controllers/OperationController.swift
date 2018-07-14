@@ -5,110 +5,129 @@ import FluentSQLite
 final class OperationController {
     
     func getList(_ req: Request) throws -> Future<[Operation]> {
-        return Operation.query(on: req).sort(\.date, .descending).all()
+        return try listFilteredByUser(req).all()
     }
-
     
     func getElem(_ req: Request) throws -> Future<Operation> {
-        return try Operation.find(req.parameters.next(Int.self), on: req).unwrap(or: OperationError.noSuchOperation)
+        return try listFilteredByUser(req)
+            .filter(\Operation.id == req.parameters.next(Int.self))
+            .first().unwrap(or: Abort(HTTPStatus.badRequest))
     }
-
-
-    func filteredList(_ req: Request, _ operationTypeId: Int) -> Future<[Operation]> {
-        return Operation.query(on: req).filter(\.operationTypeId == operationTypeId).sort(\.date, .descending).all()
+    
+    private func listFilteredByOperationType (with id: Int, _ req: Request) throws -> Future<[Operation]> {
+        return try listFilteredByUser(req)
+            .filter(\Operation.operationTypeId == id).all() 
     }
-
+    
+    private func listFilteredByUser(_ req: Request) throws -> QueryBuilder<SQLiteDatabase, Operation> {
+        let user = try req.requireAuthenticated(User.self)
+        return try Operation.query(on: req)
+            .join(\Account.id, to: \Operation.firstAccountId)
+            .filter(\Account.userId == user.requireID())
+    }
     
     func getIncomeList(_ req: Request) throws -> Future<[Operation]> {
-        return filteredList(req, Operation.incomeOperationId)
+        return try listFilteredByOperationType(with: Operation.incomeOperationId, req)
     }
     
     
     func getOutgoList(_ req: Request) throws -> Future<[Operation]> {
-        return filteredList(req, Operation.outgoOperationId)
+        return try listFilteredByOperationType(with: Operation.outgoOperationId, req)
     }
     
     
     func getTransferList(_ req: Request) throws -> Future<[Operation]> {
-        return filteredList(req, Operation.transferOperationId)
+        return try listFilteredByOperationType(with: Operation.transferOperationId, req)
     }
     
     
-    func createIncome(_ req: Request) throws -> Future<HTTPStatus> {
-        
+    func createIncome(_ req: Request) throws -> Future<HTTPStatus> { //
+        let user = try req.requireAuthenticated(User.self)
         var accId = 0, sum = 0, comment = ""
+        
+        _ = try req.content.decode(IncomeData.self)
+            .map(to: IncomeData.self) { value in
+                accId = value.accountId
+                sum = value.sum
+                comment = value.comment
+                return value
+        }
+        
+        return Account.find(accId, on: req).map(to: Account?.self) { account in
+            if account?.userId != user.id {
+                throw Abort(HTTPStatus.badRequest)
+            }
+            return account
+            }.map(to: Operation.self) { account in
+                if let account = account {
+                    account.sum += sum
+                    _ = account.save(on: req)
+                }
+                let op = Operation(operationTypeId: Operation.incomeOperationId, sum: sum, firstAccountId: accId, secondAccountId: nil, comment: comment)
+                return op
+            }.create(on: req).transform(to: .created)
+    }
     
+    
+    func createOutgo(_ req: Request) throws -> Future<HTTPStatus> { //
+        let user = try req.requireAuthenticated(User.self)
+        var accId = 0, sum = 0, comment = ""
+        
         _ = try req.content.decode(IncomeData.self).map(to: IncomeData.self) { value in
-            accId = value.id!
+            accId = value.accountId
             sum = value.sum
             comment = value.comment
             return value
         }
         
-        _ = Account.find(accId, on: req).map(to: Account.self) { account in
-            account!.sum += sum
-            _ = account!.save(on: req)
-            return account!
-        }
-        
-        let op = Operation(operationTypeId: Operation.incomeOperationId, sum: sum, firstAccoountid: accId, secondAccoountid: nil, comment: comment)
-        return op.create(on: req).transform(to: .ok)
-        
+        return Account.find(accId, on: req).map(to: Account?.self) { account in
+            if account?.userId != user.id {
+                throw Abort(HTTPStatus.badRequest)
+            }
+            return account
+            }.map(to: Operation.self) { account in
+                if let account = account {
+                    account.sum -= sum
+                    _ = account.save(on: req)
+                }
+                let op = Operation(operationTypeId: Operation.outgoOperationId, sum: sum, firstAccountId: accId, secondAccountId: nil, comment: comment)
+                return op
+            }.create(on: req).transform(to: .ok)
     }
     
     
-    func createOutgo(_ req: Request) throws -> Future<HTTPStatus> {
-        var accId = 0, sum = 0, comment = ""
-        
-        _ = try req.content.decode(IncomeData.self).map(to: IncomeData.self) { value in
-            accId = value.id!
-            sum = value.sum
-            comment = value.comment
-            return value
-        }
-        
-        _ =  Account.find(accId, on: req).map(to: Account.self) { account in
-            account!.sum -= sum
-            _ = account!.save(on: req)
-            return account!
-        }
-        
-        let op = Operation(operationTypeId: Operation.outgoOperationId, sum: sum, firstAccoountid: accId, secondAccoountid: nil, comment: comment)
-        return  op.create(on: req).transform(to: .ok)
-    }
-    
-    
-    func createTransfer(_ req: Request) throws -> Future<HTTPStatus> {
+    func createTransfer(_ req: Request) throws -> Future<HTTPStatus> { //
+        let user = try req.requireAuthenticated(User.self)
         var accId1 = 0, accId2 = 0, sum = 0, comment = ""
         
         _ = try req.content.decode(TransferData.self).map(to: TransferData.self) { value in
-            accId1 = value.id!
-            accId2 = value.id2!
+            accId1 = value.firstAccountId
+            accId2 = value.secondAccountId
             sum = value.sum
             comment = value.comment
             return value
         }
         
-        _ = Account.find(accId1, on: req).map(to: Account.self) { account in
-            account!.sum -= sum
-            _ = account!.save(on: req)
-            return account!
-        }
-
-        _ = Account.find(accId2, on: req).map(to: Account.self) { account in
-            account!.sum += sum
-            _ = account!.save(on: req)
-            return account!
-        }
-        
-        let op = Operation(operationTypeId: Operation.transferOperationId, sum: sum, firstAccoountid: accId1, secondAccoountid: accId2, comment: comment)
-        return op.create(on: req).transform(to: .ok)
+        return Account.find(accId1, on: req).and(Account.find(accId2, on: req))
+            .map(to: (Account?, Account?).self) { account1, account2 in
+                if account1?.userId != user.id || account2?.userId != user.id || accId1 == accId2 {
+                    throw Abort(HTTPStatus.badRequest)
+                }
+                return (account1, account2)
+            }.map(to: Operation.self) { (account1, account2) in
+                if let account1 = account1, let account2 = account2 {
+                    account1.sum -= sum
+                    _ = account1.save(on: req)
+                    
+                    account2.sum += sum
+                    _ = account2.save(on: req)
+                }
+                let op = Operation(operationTypeId: Operation.transferOperationId, sum: sum, firstAccountId: accId1, secondAccountId: accId2, comment: comment)
+                return op
+            }.create(on: req).transform(to: .ok)
     }
-    
 }
 
 
-enum OperationError: Error {
-    case noSuchOperation
-}
+
 

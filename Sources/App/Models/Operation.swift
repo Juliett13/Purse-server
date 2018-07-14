@@ -8,19 +8,19 @@ final class Operation: SQLiteModel {
     static let transferOperationId = 2
 
     var id: Int?
-    var operationTypeId: Int
+    var operationTypeId: OperationType.ID
     var sum: Int                // !!!!!!!!
-    var firstAccoountid: Int
-    var secondAccoountid: Int?  
+    var firstAccountId: Account.ID
+    var secondAccountId: Account.ID?
     var date: Date
     var comment: String
-
-    init(id: Int? = nil, operationTypeId: Int, sum: Int, firstAccoountid: Int, secondAccoountid: Int?, comment: String) {
+    
+    init(id: Int? = nil, operationTypeId: OperationType.ID, sum: Int, firstAccountId: Account.ID, secondAccountId: Account.ID?, comment: String) {
         self.id = id
         self.operationTypeId = operationTypeId
         self.sum = sum
-        self.firstAccoountid = firstAccoountid
-        self.secondAccoountid = secondAccoountid
+        self.firstAccountId = firstAccountId
+        self.secondAccountId = secondAccountId
         date = Date()
         self.comment = comment
     }
@@ -29,14 +29,13 @@ final class Operation: SQLiteModel {
         self.id = 0
         self.operationTypeId = 0
         self.sum = 0
-        self.firstAccoountid = 0
-        self.secondAccoountid = 0
+        self.firstAccountId = 0
+        self.secondAccountId = 0
         date = Date()
         self.comment = ""
     }
-    
 }
-
+    
 extension Operation: Content {}
 extension Operation: Migration {}
 extension Operation: Parameter { }

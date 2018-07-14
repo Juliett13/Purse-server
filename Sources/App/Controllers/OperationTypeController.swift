@@ -7,11 +7,7 @@ final class OperationTypeController {
     }
     
     func getElem(_ req: Request) throws -> Future<OperationType> {
-        return try OperationType.find(req.parameters.next(Int.self), on: req).unwrap(or: OperationTypeError.noSuchType)
+        return try OperationType.find(req.parameters.next(Int.self), on: req)
+            .unwrap(or: Abort(HTTPStatus.badRequest))
     }
-}
-
-
-enum OperationTypeError: Error {
-    case noSuchType
 }
