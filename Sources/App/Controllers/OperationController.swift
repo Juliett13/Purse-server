@@ -24,6 +24,7 @@ final class OperationController {
         return try Operation.query(on: req)
             .join(\Account.id, to: \Operation.firstAccountId)
             .filter(\Account.userId == user.requireID())
+        
     }
     
     func getIncomeList(_ req: Request) throws -> Future<[Operation]> {
@@ -38,6 +39,42 @@ final class OperationController {
     
     func getTransferList(_ req: Request) throws -> Future<[Operation]> {
         return try listFilteredByOperationType(with: Operation.transferOperationId, req)
+    }
+    
+    func getListForAccount(_ req: Request) throws -> Future<[Operation]> {
+        let _ = try req.requireAuthenticated(User.self)
+        let accountId = try req.parameters.next(Int.self)
+        return Operation.query(on: req)
+            .group(.or) {
+                $0.filter(\Operation.firstAccountId == accountId)
+                    .filter(\Operation.secondAccountId == accountId)
+            }
+//            .filter(\Operation.firstAccountId == accountId)
+            .all()
+    }
+
+    func getIncomeListForAccount(_ req: Request) throws -> Future<[Operation]> {
+        return try getFilteredListForAccount(req, operationTypeId: Operation.incomeOperationId)
+    }
+
+    func getOutgoListForAccount(_ req: Request) throws -> Future<[Operation]> {
+        return try getFilteredListForAccount(req, operationTypeId: Operation.outgoOperationId)
+    }
+
+    func getTransferListForAccount(_ req: Request) throws -> Future<[Operation]> {
+        return try getFilteredListForAccount(req, operationTypeId: Operation.transferOperationId)
+    }
+
+    func getFilteredListForAccount(_ req: Request, operationTypeId: Int) throws -> Future<[Operation]> {
+        let _ = try req.requireAuthenticated(User.self)
+        let accountId = try req.parameters.next(Int.self)
+        return Operation.query(on: req)
+            .group(.or) {
+                $0.filter(\Operation.firstAccountId == accountId)
+                .filter(\Operation.secondAccountId == accountId)
+            }
+            .filter(\Operation.operationTypeId == operationTypeId)
+            .all()
     }
     
     
@@ -92,7 +129,7 @@ final class OperationController {
                 }
                 let op = Operation(operationTypeId: Operation.outgoOperationId, sum: sum, firstAccountId: accId, secondAccountId: nil, comment: comment)
                 return op
-            }.create(on: req).transform(to: .ok)
+            }.create(on: req).transform(to: .created)
     }
     
     
@@ -124,7 +161,7 @@ final class OperationController {
                 }
                 let op = Operation(operationTypeId: Operation.transferOperationId, sum: sum, firstAccountId: accId1, secondAccountId: accId2, comment: comment)
                 return op
-            }.create(on: req).transform(to: .ok)
+            }.create(on: req).transform(to: .created)
     }
 }
 

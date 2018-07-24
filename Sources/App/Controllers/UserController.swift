@@ -17,11 +17,17 @@ final class UserController {
         }
     }
     
-    func loginUser(_ request: Request) throws -> Future<User> {
-        return try request.content.decode(User.self).flatMap(to: User.self) { user in
+    func loginUser(_ request: Request) throws -> Future<User.PublicUser> {
+        return try request.content.decode(User.self).flatMap(to: User.PublicUser.self) { user in
             let passwordVerifier = try request.make(BCryptDigest.self)
             return User.authenticate(username: user.name, password: user.password, using: passwordVerifier, on: request)
-                .unwrap(or: Abort(HTTPResponseStatus.unauthorized))
+                .unwrap(or: Abort(HTTPResponseStatus.unauthorized)).flatMap(to: User.PublicUser.self) { createdUser in
+                    let accessToken = Token(for: createdUser)
+                    return accessToken.save(on: request).map(to: User.PublicUser.self) { createdToken in
+                        let publicUser = User.PublicUser(username: createdUser.name, token: createdToken.token)
+                        return publicUser
+                    }
+            }
         }
     }
     

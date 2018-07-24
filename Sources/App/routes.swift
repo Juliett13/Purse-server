@@ -20,11 +20,15 @@ public func routes(_ router: Router) throws {
 
     let operationController = OperationController()
     authedRoutes.get("operation", use: operationController.getList)
-    authedRoutes.get("operation", Int.parameter, use: operationController.getElem)
+    authedRoutes.get("operation", Int.parameter, use: operationController.getListForAccount)
 
     authedRoutes.post("operation", "income", use: operationController.createIncome)
     authedRoutes.post("operation", "outgo", use: operationController.createOutgo)
     authedRoutes.post("operation", "transfer", use: operationController.createTransfer)
+
+    authedRoutes.get("operation", "income", Int.parameter, use: operationController.getIncomeListForAccount)
+    authedRoutes.get("operation", "outgo", Int.parameter, use: operationController.getOutgoListForAccount)
+    authedRoutes.get("operation", "transfer", Int.parameter, use: operationController.getTransferListForAccount)
     
     authedRoutes.get("operation", "income", use: operationController.getIncomeList)
     authedRoutes.get("operation", "outgo", use: operationController.getOutgoList)
