@@ -16,7 +16,8 @@ final class OperationController {
     
     private func listFilteredByOperationType (with id: Int, _ req: Request) throws -> Future<[Operation]> {
         return try listFilteredByUser(req)
-            .filter(\Operation.operationTypeId == id).all() 
+            .filter(\Operation.operationTypeId == id)
+            .all()
     }
     
     private func listFilteredByUser(_ req: Request) throws -> QueryBuilder<SQLiteDatabase, Operation> {
@@ -24,7 +25,7 @@ final class OperationController {
         return try Operation.query(on: req)
             .join(\Account.id, to: \Operation.firstAccountId)
             .filter(\Account.userId == user.requireID())
-        
+            .sort(\Operation.date, .descending)
     }
     
     func getIncomeList(_ req: Request) throws -> Future<[Operation]> {
@@ -50,6 +51,7 @@ final class OperationController {
                     .filter(\Operation.secondAccountId == accountId)
             }
 //            .filter(\Operation.firstAccountId == accountId)
+            .sort(\Operation.date, .descending)
             .all()
     }
 
@@ -74,11 +76,12 @@ final class OperationController {
                 .filter(\Operation.secondAccountId == accountId)
             }
             .filter(\Operation.operationTypeId == operationTypeId)
+            .sort(\Operation.date, .descending)
             .all()
     }
     
     
-    func createIncome(_ req: Request) throws -> Future<HTTPStatus> { //
+    func createIncome(_ req: Request) throws -> Future<Operation> {
         let user = try req.requireAuthenticated(User.self)
         var accId = 0, sum = 0, comment = ""
         
@@ -102,11 +105,11 @@ final class OperationController {
                 }
                 let op = Operation(operationTypeId: Operation.incomeOperationId, sum: sum, firstAccountId: accId, secondAccountId: nil, comment: comment)
                 return op
-            }.create(on: req).transform(to: .created)
+            }.create(on: req)
     }
     
     
-    func createOutgo(_ req: Request) throws -> Future<HTTPStatus> { //
+    func createOutgo(_ req: Request) throws -> Future<Operation> {
         let user = try req.requireAuthenticated(User.self)
         var accId = 0, sum = 0, comment = ""
         
@@ -129,11 +132,11 @@ final class OperationController {
                 }
                 let op = Operation(operationTypeId: Operation.outgoOperationId, sum: sum, firstAccountId: accId, secondAccountId: nil, comment: comment)
                 return op
-            }.create(on: req).transform(to: .created)
+            }.create(on: req)
     }
     
     
-    func createTransfer(_ req: Request) throws -> Future<HTTPStatus> { //
+    func createTransfer(_ req: Request) throws -> Future<Operation> {
         let user = try req.requireAuthenticated(User.self)
         var accId1 = 0, accId2 = 0, sum = 0, comment = ""
         
@@ -161,7 +164,7 @@ final class OperationController {
                 }
                 let op = Operation(operationTypeId: Operation.transferOperationId, sum: sum, firstAccountId: accId1, secondAccountId: accId2, comment: comment)
                 return op
-            }.create(on: req).transform(to: .created)
+            }.create(on: req)
     }
 }
 

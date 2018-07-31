@@ -9,7 +9,7 @@ final class Operation: SQLiteModel {
 
     var id: Int?
     var operationTypeId: OperationType.ID
-    var sum: Int                // !!!!!!!!
+    var sum: Int
     var firstAccountId: Account.ID
     var secondAccountId: Account.ID?
     var date: Date
@@ -34,6 +34,14 @@ final class Operation: SQLiteModel {
         date = Date()
         self.comment = ""
     }
+
+    func willCreate(on conn: SQLiteConnection) throws -> EventLoopFuture<Operation> {
+        if self.sum < 0 {
+            throw Abort(HTTPStatus.badRequest)
+        }
+        return Future.map(on: conn) { self }
+    }
+
 }
     
 extension Operation: Content {}

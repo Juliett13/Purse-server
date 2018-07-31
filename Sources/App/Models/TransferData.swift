@@ -3,7 +3,7 @@ import Vapor
 
 final class TransferData: SQLiteModel {
     var id: Int?
-    var sum: Int //
+    var sum: Int
     var comment: String
     var firstAccountId: Account.ID
     var secondAccountId: Account.ID

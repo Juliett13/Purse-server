@@ -21,16 +21,20 @@ final class AccountController {
         }
     }
     
-    func create(_ req: Request) throws -> Future<HTTPStatus> {
+    func create(_ req: Request) throws -> Future<Account> {
         let user = try req.requireAuthenticated(User.self)
-        return try req.content.decode(Account.self)
-            .map(to: Account.self) { account in
-                if account.userId != user.id {
+
+        return try req.content.decode(AccountData.self)
+            .map(to: Account.self) { accountData in
+
+                guard let id = user.id else {
                     throw Abort(HTTPStatus.badRequest)
                 }
+
+                let account = Account(sum: accountData.sum, userId: id, description: accountData.description)
                 return account
             }.create(on: req)
-            .transform(to: HTTPStatus.created)
+
     }
 }
 

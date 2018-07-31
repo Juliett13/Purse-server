@@ -3,7 +3,7 @@ import Vapor
 
 final class Account: SQLiteModel {
     var id: Int?
-    var sum: Int // !!!!!!
+    var sum: Int 
     var description: String
     var userId: User.ID
     
@@ -19,6 +19,13 @@ final class Account: SQLiteModel {
         self.sum = 0
         self.userId = 0
         self.description = ""
+    }
+
+    func willCreate(on conn: SQLiteConnection) throws -> EventLoopFuture<Account> {
+        if self.sum < 0 {
+            throw Abort(HTTPStatus.badRequest)
+        }
+        return Future.map(on: conn) { self }
     }
 }
 

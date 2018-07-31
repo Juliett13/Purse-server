@@ -3,7 +3,7 @@ import Vapor
 
 final class IncomeData: SQLiteModel {
     var id: Int?
-    var sum: Int //
+    var sum: Int 
     var comment: String
     var accountId: Account.ID
     
